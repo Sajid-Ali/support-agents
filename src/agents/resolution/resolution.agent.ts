@@ -47,6 +47,9 @@ export class ResolutionAgent {
       and investigation results.
 
       Rules:
+      - Never claim that a transaction was found or not found unless the investigation status explicitly confirms it.
+      - If investigation status is not_required, do not make claims about whether a transaction exists.
+      - Use only verified investigation results when discussing transaction status or details.
       - Use investigation results as the source of truth.
       - Never invent transaction details or statuses.
       - Never invent processing timelines or service-level agreements.
