@@ -3,9 +3,10 @@ import { Module } from '@nestjs/common';
 import { SupportService } from './support.service.js';
 import { SupportController } from './support.controller.js';
 import { ClassificationModule } from '../classification/classification.module.js';
+import { InvestigationModule } from '../investigation/investigation.module.js';
 
 @Module({
-  imports: [ClassificationModule],
+  imports: [ClassificationModule, InvestigationModule],
   controllers: [SupportController],
   providers: [SupportService],
 })
