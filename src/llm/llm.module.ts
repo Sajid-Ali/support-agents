@@ -30,8 +30,8 @@ import { GeminiProvider } from './providers/gemini.provider.js';
 
         if (provider === 'gemini') {
           return new GeminiProvider(
-            configService.getOrThrow<string>('GEMINI_API_KEY'),
-            configService.getOrThrow<string>('GEMINI_MODEL'),
+            configService.getOrThrow<string>('ENV_GEMINI_API_KEY'),
+            configService.getOrThrow<string>('ENV_GEMINI_MODEL'),
           );
         }
 

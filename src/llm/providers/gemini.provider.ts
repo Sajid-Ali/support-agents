@@ -1,6 +1,9 @@
 import { GoogleGenAI } from '@google/genai';
 import { Logger } from '@nestjs/common';
-import { LlmProvider, LlmRequest } from '../interfaces/llm-provider.interface.js';
+import {
+  LlmProvider,
+  LlmRequest,
+} from '../interfaces/llm-provider.interface.js';
 
 export class GeminiProvider implements LlmProvider {
   readonly providerName = 'gemini';
@@ -24,12 +27,21 @@ export class GeminiProvider implements LlmProvider {
     const startTime = Date.now();
 
     try {
+      this.logger.log(
+        '[Gemini] Schema properties:',
+        Object.keys(
+          (request.responseSchema?.properties as Record<string, unknown>) ?? {},
+        ),
+      );
       const response = await this.client.models.generateContent({
         model: this.model,
         contents: request.userPrompt,
         config: {
           systemInstruction: request.systemPrompt,
           responseMimeType: 'application/json',
+          responseJsonSchema: request.responseSchema,
+          temperature: 0.1,
+          maxOutputTokens: 512,
         },
       });
 

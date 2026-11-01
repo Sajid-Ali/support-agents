@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 
-import { LlmModule } from '../../llm/llm.module.js';
 import { SupportService } from './support.service.js';
 import { SupportController } from './support.controller.js';
+import { ClassificationModule } from '../classification/classification.module.js';
+import { InvestigationModule } from '../investigation/investigation.module.js';
+import { ResolutionModule } from '../resolution/resolution.module.js';
 
 @Module({
-  imports: [LlmModule],
+  imports: [ClassificationModule, InvestigationModule, ResolutionModule],
   controllers: [SupportController],
   providers: [SupportService],
 })
