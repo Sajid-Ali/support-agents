@@ -1,22 +1,26 @@
 import { Injectable } from '@nestjs/common';
 
-import { TransactionService } from '../../tools/transactions/transaction.service.js';
-import { ClassificationResult } from '../classification/classification.schema.js';
 import {
   InvestigationResult,
   InvestigationSchema,
 } from './investigation.schema.js';
+import { SupportContext } from '../shared/interfaces/support-context.interface.js';
+import { TransactionService } from '../../tools/transactions/transaction.service.js';
 
 @Injectable()
 export class InvestigationAgent {
   constructor(private readonly transactionService: TransactionService) {}
 
-  async execute(
-    classification: ClassificationResult,
-  ): Promise<InvestigationResult> {
-    const transactionId = classification.entities.transaction_id;
+  async execute(context: SupportContext): Promise<InvestigationResult> {
+    const classification = context.classification;
 
-    if (!classification.requires_investigation) {
+    if (!classification) {
+      throw new Error('Classification result is missing from support context.');
+    }
+
+    const transactionId = classification?.entities.transaction_id;
+
+    if (!classification?.requires_investigation) {
       return this.createResult({
         status: 'not_required',
         findings: 'No transaction investigation is required.',
