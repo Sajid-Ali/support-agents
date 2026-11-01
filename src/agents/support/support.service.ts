@@ -1,7 +1,9 @@
 import {
   Inject,
   Injectable,
-  InternalServerErrorException,
+  Logger,
+  ServiceUnavailableException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { LLM_PROVIDER } from '../../llm/interfaces/llm-provider.interface.js';
 import type { LlmProvider } from '../../llm/interfaces/llm-provider.interface.js';
@@ -12,6 +14,8 @@ import {
 
 @Injectable()
 export class SupportService {
+  private readonly logger = new Logger(SupportService.name);
+
   constructor(
     @Inject(LLM_PROVIDER) private readonly llmProvider: LlmProvider,
   ) {}
@@ -19,7 +23,8 @@ export class SupportService {
   async processRequest(
     message: string,
   ): Promise<{ agent: string; provider: string; result: SupportResponse }> {
-    console.log("🚀 ~ SupportService ~ processRequest ~ message:", message)
+    this.logger.log(`Processing request via "${this.llmProvider.providerName}" provider`);
+
     const systemPrompt = `
     You are a customer support classification and response agent.
     Your responsibilities:
@@ -55,29 +60,52 @@ export class SupportService {
         "response": "Customer-facing response"
     }
     `;
+
+    let rawResponse: string;
     try {
-      const rawResponse = await this.llmProvider.generateText({
+      rawResponse = await this.llmProvider.generateText({
         userPrompt: message,
         systemPrompt,
       });
-
-      const parsedJson: unknown = JSON.parse(rawResponse);
-
-      const validation = SupportResponseSchema.safeParse(parsedJson);
-
-      if (!validation.success) {
-        throw new Error('Invalid AI response structure');
-      }
-      return {
-        agent: 'support-agent',
-        provider: this.llmProvider.providerName,
-        result: validation.data,
-      };
     } catch (error) {
-      console.log("🚀 ~ SupportService ~ processRequest ~ error:", error)
-      throw new InternalServerErrorException(
-        'Unable to process the support request',
+      this.logger.error(
+        `LLM provider "${this.llmProvider.providerName}" failed to generate a response`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw new ServiceUnavailableException(
+        'The support agent is temporarily unavailable. Please try again later.',
       );
     }
+
+    let parsedJson: unknown;
+    try {
+      parsedJson = JSON.parse(rawResponse);
+    } catch {
+      this.logger.error(`LLM returned non-JSON response: ${rawResponse}`);
+      throw new UnprocessableEntityException(
+        'The support agent returned an invalid response.',
+      );
+    }
+
+    const validation = SupportResponseSchema.safeParse(parsedJson);
+
+    if (!validation.success) {
+      this.logger.error(
+        `LLM response failed schema validation: ${JSON.stringify(validation.error.issues)}`,
+      );
+      throw new UnprocessableEntityException(
+        'The support agent returned an invalid response.',
+      );
+    }
+
+    this.logger.log(
+      `Classified request as "${validation.data.category}" (${validation.data.priority} priority)`,
+    );
+
+    return {
+      agent: 'support-agent',
+      provider: this.llmProvider.providerName,
+      result: validation.data,
+    };
   }
 }
