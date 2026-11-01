@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppService } from './app.service.js';
 import { AppController } from './app.controller.js';
 import { SupportModule } from './agents/support/support.module.js';
+import { ClassificationModule } from './agents/classification/classification.module.js';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { SupportModule } from './agents/support/support.module.js';
       envFilePath: '.env',
     }),
     SupportModule,
+    ClassificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
