@@ -1,10 +1,11 @@
 import { GoogleGenAI } from '@google/genai';
+import { Logger } from '@nestjs/common';
 import { LlmProvider, LlmRequest } from '../interfaces/llm-provider.interface.js';
-
 
 export class GeminiProvider implements LlmProvider {
   readonly providerName = 'gemini';
 
+  private readonly logger = new Logger(GeminiProvider.name);
   private readonly client: GoogleGenAI;
 
   constructor(
@@ -20,13 +21,9 @@ export class GeminiProvider implements LlmProvider {
   }
 
   async generateText(request: LlmRequest): Promise<string> {
-    console.log('[Gemini] Starting request');
-    console.log('[Gemini] Model:', this.model);
-    console.log('[Gemini] API key configured:', Boolean(this.client));
+    const startTime = Date.now();
 
     try {
-      const startTime = Date.now();
-
       const response = await this.client.models.generateContent({
         model: this.model,
         contents: request.userPrompt,
@@ -36,9 +33,7 @@ export class GeminiProvider implements LlmProvider {
         },
       });
 
-      console.log('[Gemini] Request completed');
-      console.log('[Gemini] Duration:', Date.now() - startTime, 'ms');
-      console.log('[Gemini] Response:', response.text);
+      this.logger.log(`Request completed in ${Date.now() - startTime}ms`);
 
       if (!response.text) {
         throw new Error('Gemini returned an empty response');
@@ -46,20 +41,12 @@ export class GeminiProvider implements LlmProvider {
 
       return response.text;
     } catch (error) {
-      console.error('[Gemini] API request failed');
+      const status = (error as { status?: number }).status;
 
-      if (error instanceof Error) {
-        console.error('Error name:', error.name);
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-      }
-
-      const apiError = error as {
-        status?: number;
-        message?: string;
-      };
-
-      console.error('HTTP status:', apiError.status);
+      this.logger.error(
+        `Gemini request failed${status ? ` (HTTP ${status})` : ''}`,
+        error instanceof Error ? error.stack : String(error),
+      );
 
       throw error;
     }

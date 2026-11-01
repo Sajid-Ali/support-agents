@@ -8,7 +8,6 @@ export class SupportController {
 
   @Post('chat')
   async chat(@Body() input: ChatDto) {
-    console.log("🚀 ~ SupportController ~ chat ~ input:", input)
     return this.supportService.processRequest(input.message);
   }
 }
