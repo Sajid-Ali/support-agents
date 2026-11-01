@@ -1,13 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { LLM_PROVIDER } from '../../llm/interfaces/llm-provider.interface.js';
-import { InvestigationResult } from '../investigation/investigation.schema.js';
-import type { LlmProvider } from '../../llm/interfaces/llm-provider.interface.js';
-import { ClassificationResult } from '../classification/classification.schema.js';
+
 import {
   ResolutionResult,
   ResolutionSchema,
   ResolutionJsonSchema,
 } from './resolution.schema.js';
+import { LLM_PROVIDER } from '../../llm/interfaces/llm-provider.interface.js';
+import type { LlmProvider } from '../../llm/interfaces/llm-provider.interface.js';
+import { SupportContext } from '../shared/interfaces/support-context.interface.js';
 
 @Injectable()
 export class ResolutionAgent {
@@ -16,15 +16,20 @@ export class ResolutionAgent {
     private readonly llmProvider: LlmProvider,
   ) {}
 
-  async execute(
-    message: string,
-    classification: ClassificationResult,
-    investigation: InvestigationResult,
-  ): Promise<ResolutionResult> {
+  async execute(context: SupportContext): Promise<ResolutionResult> {
+    const classification = context.classification;
+    const investigation = context.investigation;
+
+    if (!classification || !investigation) {
+      throw new Error(
+        'Classification or investigation result is missing from support context.',
+      );
+    }
+
     const response = await this.llmProvider.generateText({
       systemPrompt: this.getSystemPrompt(),
       userPrompt: JSON.stringify({
-        customer_message: message,
+        customer_message: context.customerMessage,
         classification,
         investigation,
       }),
