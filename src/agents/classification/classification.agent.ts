@@ -1,11 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
+
+import {
+  ClassificationResult,
+  ClassificationSchema,
+  ClassificationJsonSchema,
+} from './classification.schema.js';
 import { LLM_PROVIDER } from '../../llm/interfaces/llm-provider.interface.js';
 import type { LlmProvider } from '../../llm/interfaces/llm-provider.interface.js';
-import {
-    ClassificationResult,
-    ClassificationSchema,
-    ClassificationJsonSchema,
-} from './classification.schema.js';
+import { SupportContext } from '../shared/interfaces/support-context.interface.js';
 
 @Injectable()
 export class ClassificationAgent {
@@ -13,10 +15,10 @@ export class ClassificationAgent {
     @Inject(LLM_PROVIDER) private readonly llmProvider: LlmProvider,
   ) {}
 
-  async execute(message: string): Promise<ClassificationResult> {
+  async execute(context: SupportContext): Promise<ClassificationResult> {
     const response = await this.llmProvider.generateText({
       systemPrompt: this.getSystemPrompt(),
-      userPrompt: message,
+      userPrompt: context.customerMessage,
       responseSchema: ClassificationJsonSchema,
     });
 

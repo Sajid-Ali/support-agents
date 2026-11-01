@@ -8,6 +8,7 @@ import { ClassificationModule } from './agents/classification/classification.mod
 import { InvestigationModule } from './agents/investigation/investigation.module.js';
 import { TransactionsModule } from './tools/transactions/transactions.module.js';
 import { ResolutionModule } from './agents/resolution/resolution.module.js';
+import { OrchestratorModule } from './agents/orchestrator/orchestrator.module.js';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ResolutionModule } from './agents/resolution/resolution.module.js';
     InvestigationModule,
     TransactionsModule,
     ResolutionModule,
+    OrchestratorModule,
   ],
   controllers: [AppController],
   providers: [AppService],

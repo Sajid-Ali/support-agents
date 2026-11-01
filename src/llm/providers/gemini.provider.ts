@@ -53,12 +53,29 @@ export class GeminiProvider implements LlmProvider {
 
       return response.text;
     } catch (error) {
-      const status = (error as { status?: number }).status;
+      // const status = (error as { status?: number }).status;
 
-      this.logger.error(
-        `Gemini request failed${status ? ` (HTTP ${status})` : ''}`,
-        error instanceof Error ? error.stack : String(error),
-      );
+      // this.logger.error(
+      //   `Gemini request failed${status ? ` (HTTP ${status})` : ''}`,
+      //   error instanceof Error ? error.stack : String(error),
+      // );
+
+      // throw error;
+      if (error instanceof Error) {
+        this.logger.error(
+          `Gemini request failed: ${error.message}`,
+          error.stack,
+        );
+
+        if (error.cause instanceof Error) {
+          this.logger.error(`Underlying cause: ${error.cause.message}`);
+        }
+
+        console.dir(error, { depth: 5 });
+      } else {
+        this.logger.error('Gemini request failed with an unknown error');
+        console.dir(error, { depth: 5 });
+      }
 
       throw error;
     }
