@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { Logger } from '@nestjs/common';
 
 import {
   LlmRequest,
@@ -8,6 +9,7 @@ import {
 export class OpenAiProvider implements LlmProvider {
   readonly providerName = 'openai';
 
+  private readonly logger = new Logger(OpenAiProvider.name);
   private readonly client: OpenAI;
 
   constructor(
@@ -18,12 +20,20 @@ export class OpenAiProvider implements LlmProvider {
   }
 
   async generateText(request: LlmRequest): Promise<string> {
-    const response = await this.client.responses.create({
-      model: this.model,
-      instructions: request.systemPrompt,
-      input: request.userPrompt,
-    });
+    try {
+      const response = await this.client.responses.create({
+        model: this.model,
+        instructions: request.systemPrompt,
+        input: request.userPrompt,
+      });
 
-    return response.output_text;
+      return response.output_text;
+    } catch (error) {
+      this.logger.error(
+        'OpenAI request failed',
+        error instanceof Error ? error.stack : String(error),
+      );
+      throw error;
+    }
   }
 }
