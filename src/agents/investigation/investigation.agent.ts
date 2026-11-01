@@ -21,6 +21,7 @@ export class InvestigationAgent {
         status: 'not_required',
         findings: 'No transaction investigation is required.',
         nextAction: 'Continue with the support workflow.',
+        transactionId: transactionId ?? null,
       });
     }
 
@@ -29,6 +30,7 @@ export class InvestigationAgent {
         status: 'needs_more_information',
         findings: 'A transaction ID is required to investigate this request.',
         nextAction: 'Ask the customer to provide their transaction ID.',
+        transactionId: transactionId ?? null,
       });
     }
 
@@ -39,6 +41,7 @@ export class InvestigationAgent {
         status: 'not_found',
         findings: 'No transaction was found for the provided transaction ID.',
         nextAction: 'Verify the transaction ID with the customer.',
+        transactionId: transactionId ?? null,
       });
     }
 
@@ -63,11 +66,12 @@ export class InvestigationAgent {
     status: InvestigationResult['status'];
     findings: string;
     nextAction: string;
+    transactionId: string | null;
   }): InvestigationResult {
     return InvestigationSchema.parse({
       status: params.status,
       transaction: {
-        transaction_id: null,
+        transaction_id: params.transactionId,
         transaction_status: 'unknown',
         amount: null,
         currency: null,
