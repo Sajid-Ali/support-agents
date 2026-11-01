@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 
 import { ResolutionAgent } from '../resolution/resolution.agent.js';
 import { InvestigationAgent } from '../investigation/investigation.agent.js';
-import { InvestigationResult } from '../investigation/investigation.schema.js';
 import { ClassificationAgent } from '../classification/classification.agent.js';
-import { ClassificationResult } from '../classification/classification.schema.js';
+
+import type { InvestigationResult } from '../investigation/investigation.schema.js';
+import type { ClassificationResult } from '../classification/classification.schema.js';
+import type { SupportContext } from '../shared/interfaces/support-context.interface.js';
 
 @Injectable()
 export class OrchestratorAgent {
@@ -15,44 +18,53 @@ export class OrchestratorAgent {
   ) {}
 
   async execute(message: string) {
-    // Step 1: Understand the customer's request.
-    const classification = await this.classificationAgent.execute(message);
+    const context: SupportContext = {
+      requestId: randomUUID(),
+      customerMessage: message,
+      currentStep: 'classification',
+      completedSteps: [],
+      requiresHumanReview: false,
+    };
+    // Step 1: Classification
+    context.currentStep = 'classification';
+    context.classification = await this.classificationAgent.execute(context);
+    context.completedSteps.push('classification');
 
-    // Step 2: Investigate only when required.
-    let investigation: InvestigationResult;
-
-    const requiresInvestigation =
-      classification.requires_investigation ||
-      this.requiresInvestigationForIntent(classification.intent);
-
-    if (requiresInvestigation) {
-      investigation = await this.investigationAgent.execute(classification);
+    // Step 2: Investigation
+    context.currentStep = 'investigation';
+    if (this.requiresInvestigation(context.classification)) {
+      context.investigation = await this.investigationAgent.execute(context);
     } else {
-      investigation = this.createNotRequiredInvestigation();
+      context.investigation = this.createNotRequiredInvestigation();
     }
+    context.completedSteps.push('investigation');
 
-    // Step 3: Generate the customer-facing response.
-    const resolution = await this.resolutionAgent.execute(
-      message,
-      classification,
-      investigation,
-    );
+    // Step 3: Resolution
+    context.currentStep = 'resolution';
+    context.resolution = await this.resolutionAgent.execute(context);
+    context.completedSteps.push('resolution');
 
-    // Step 4: Return the complete workflow result.
+    // Step 4: Finalize workflow
+    context.requiresHumanReview = context.investigation.requires_human_review;
+    context.currentStep = 'completed';
+
     return {
-      classification,
-      investigation,
+      request_id: context.requestId,
+      classification: context.classification,
+      investigation: context.investigation,
       resolution: {
-        ...resolution,
-        requires_human_review: investigation.requires_human_review,
+        ...context.resolution,
+        requires_human_review: context.requiresHumanReview,
       },
     };
   }
 
-  private requiresInvestigationForIntent(
-    intent: ClassificationResult['intent'],
-  ): boolean {
-    switch (intent) {
+  private requiresInvestigation(classification: ClassificationResult): boolean {
+    if (classification.requires_investigation) {
+      return true;
+    }
+
+    switch (classification.intent) {
       case 'check_transaction_status':
       case 'report_failed_transaction':
       case 'report_duplicate_transaction':
