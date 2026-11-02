@@ -1,4 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
 import {
   ClassificationResult,
@@ -10,14 +12,30 @@ import type { LlmProvider } from '../../llm/interfaces/llm-provider.interface.js
 import { SupportContext } from '../shared/interfaces/support-context.interface.js';
 
 @Injectable()
-export class ClassificationAgent {
+export class ClassificationAgent implements OnModuleInit {
+  private systemPrompt: string;
   constructor(
     @Inject(LLM_PROVIDER) private readonly llmProvider: LlmProvider,
   ) {}
 
+  async onModuleInit() {
+    const definitionFile = join(
+      process.cwd(),
+      'src',
+      'agents',
+      'classification',
+      'classification.agent.md',
+    );
+    this.systemPrompt = (await readFile(definitionFile, 'utf8')).trim();
+
+    if (!this.systemPrompt) {
+      throw new Error('Classification agent definition is empty.');
+    }
+  }
+
   async execute(context: SupportContext): Promise<ClassificationResult> {
     const response = await this.llmProvider.generateText({
-      systemPrompt: this.getSystemPrompt(),
+      systemPrompt: this.systemPrompt,
       userPrompt: context.customerMessage,
       responseSchema: ClassificationJsonSchema,
     });
@@ -25,26 +43,5 @@ export class ClassificationAgent {
     const parsedResponse: unknown = JSON.parse(response);
 
     return ClassificationSchema.parse(parsedResponse);
-  }
-
-  private getSystemPrompt(): string {
-    return `
-      You are a banking customer support classification agent.
-
-      Your responsibility is to understand customer messages
-      and classify their intent.
-
-      Rules:
-      - Do not attempt to resolve customer issues.
-      - Do not invent transaction details.
-      - Extract transaction information when available.
-      - Use null when an entity is missing.
-      - Use "unknown" when transaction type is unclear.
-      - Set requires_investigation to true when transaction
-        verification is needed.
-      - Identify missing information needed for the next step.
-      - Return valid JSON only.
-      - Follow the required output schema exactly.
-    `;
   }
 }
