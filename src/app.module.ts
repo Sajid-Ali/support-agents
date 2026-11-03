@@ -6,7 +6,7 @@ import { AppController } from './app.controller.js';
 import { SupportModule } from './agents/support/support.module.js';
 import { ClassificationModule } from './agents/classification/classification.module.js';
 import { InvestigationModule } from './agents/investigation/investigation.module.js';
-import { TransactionsModule } from './tools/transactions/transactions.module.js';
+import { TransactionsModule } from './tools/transactions/transaction.module.js';
 import { ResolutionModule } from './agents/resolution/resolution.module.js';
 import { OrchestratorModule } from './agents/orchestrator/orchestrator.module.js';
 

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { InvestigationAgent } from './investigation.agent.js';
-import { TransactionsModule } from '../../tools/transactions/transactions.module.js';
+import { TransactionsModule } from '../../tools/transactions/transaction.module.js';
 
 @Module({
     imports: [TransactionsModule],
