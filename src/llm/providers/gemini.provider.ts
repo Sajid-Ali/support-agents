@@ -1,8 +1,12 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, FunctionCallingConfigMode } from '@google/genai';
 import { Logger } from '@nestjs/common';
+
+import type { FunctionDeclaration } from '@google/genai';
 import {
   LlmProvider,
   LlmRequest,
+  LlmFunctionCall,
+  LlmToolResponse,
 } from '../interfaces/llm-provider.interface.js';
 
 export class GeminiProvider implements LlmProvider {
@@ -53,29 +57,74 @@ export class GeminiProvider implements LlmProvider {
 
       return response.text;
     } catch (error) {
-      // const status = (error as { status?: number }).status;
+      const status = (error as { status?: number }).status;
 
-      // this.logger.error(
-      //   `Gemini request failed${status ? ` (HTTP ${status})` : ''}`,
-      //   error instanceof Error ? error.stack : String(error),
-      // );
+      this.logger.error(
+        `Gemini request failed${status ? ` (HTTP ${status})` : ''}`,
+        error instanceof Error ? error.stack : String(error),
+      );
 
-      // throw error;
-      if (error instanceof Error) {
-        this.logger.error(
-          `Gemini request failed: ${error.message}`,
-          error.stack,
-        );
+      throw error;
+    }
+  }
 
-        if (error.cause instanceof Error) {
-          this.logger.error(`Underlying cause: ${error.cause.message}`);
+  async generateWithTools(
+    request: LlmRequest,
+    tools: FunctionDeclaration[],
+  ): Promise<LlmToolResponse> {
+    const startTime = Date.now();
+
+    try {
+      const response = await this.client.models.generateContent({
+        model: this.model,
+        contents: request.userPrompt,
+        config: {
+          systemInstruction: request.systemPrompt,
+          tools: [
+            {
+              functionDeclarations: tools,
+            },
+          ],
+          toolConfig: {
+            functionCallingConfig: {
+              mode: FunctionCallingConfigMode.AUTO,
+            },
+          },
+          temperature: 0.1,
+          maxOutputTokens: 512,
+        },
+      });
+
+      this.logger.log(
+        `[Gemini] Tool request completed in ${Date.now() - startTime}ms`,
+      );
+
+      const functionCalls: LlmFunctionCall[] = (
+        response.functionCalls ?? []
+      ).flatMap((call) => {
+        if (!call.name) {
+          return [];
         }
 
-        console.dir(error, { depth: 5 });
-      } else {
-        this.logger.error('Gemini request failed with an unknown error');
-        console.dir(error, { depth: 5 });
-      }
+        return [
+          {
+            name: call.name,
+            args: call.args ?? {},
+          },
+        ];
+      });
+
+      return {
+        text: response.text,
+        functionCalls,
+      };
+    } catch (error) {
+      const status = (error as { status?: number }).status;
+
+      this.logger.error(
+        `Gemini tool request failed${status ? ` (HTTP ${status})` : ''}`,
+        error instanceof Error ? error.stack : String(error),
+      );
 
       throw error;
     }
